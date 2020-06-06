@@ -3,60 +3,30 @@ package check
 import (
 	"fmt"
 	"log"
-	"net/http"
-	"net/url"
-	"path"
 	"sort"
 	"strings"
 
 	"github.com/blang/semver"
 	resource "github.com/jghiloni/helm-resource"
-	"gopkg.in/yaml.v2"
+	"github.com/jghiloni/helm-resource/repository"
 )
 
-type CheckRequest struct {
+type Request struct {
 	Source  resource.Source   `json:"source"`
 	Version *resource.Version `json:"version"`
 }
 
-type CheckResponse []resource.Version
+type Response []resource.Version
 
-func DoCheck(client resource.HTTPClient, req CheckRequest) (CheckResponse, error) {
-
-	u, err := url.ParseRequestURI(req.Source.RepositoryURL)
+func RunCommand(client resource.HTTPClient, req Request) (Response, error) {
+	repo, err := repository.Fetch(client, req.Source)
 	if err != nil {
-		return CheckResponse{}, err
-	}
-	u.Path = path.Join(u.Path, "index.yaml")
-
-	httpReq, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return CheckResponse{}, err
-	}
-
-	if req.Source.Username != "" {
-		httpReq.SetBasicAuth(req.Source.Username, req.Source.Password)
-	}
-
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		return CheckResponse{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return CheckResponse{}, fmt.Errorf("Received bad HTTP response: %q", resp.Status)
-	}
-
-	repo := resource.HelmChartRepository{}
-	err = yaml.NewDecoder(resp.Body).Decode(&repo)
-	if err != nil {
-		return CheckResponse{}, err
+		return Response{}, err
 	}
 
 	chartVersions, ok := repo.Entries[req.Source.ChartName]
 	if !ok {
-		return CheckResponse{}, fmt.Errorf("No chart %q found", req.Source.ChartName)
+		return Response{}, fmt.Errorf("No chart %q found", req.Source.ChartName)
 	}
 
 	sortBy := strings.TrimSpace(req.Source.SortBy)
@@ -65,7 +35,7 @@ func DoCheck(client resource.HTTPClient, req CheckRequest) (CheckResponse, error
 	}
 
 	if sortBy != "semver" && sortBy != "created" {
-		return CheckResponse{}, fmt.Errorf("Sort criteria is %q, but it must be semver or created", sortBy)
+		return Response{}, fmt.Errorf("Sort criteria is %q, but it must be semver or created", sortBy)
 	}
 
 	sort.Slice(chartVersions, func(i, j int) bool {
@@ -103,12 +73,13 @@ func DoCheck(client resource.HTTPClient, req CheckRequest) (CheckResponse, error
 		}
 
 		if ourVersion == -1 {
-			return CheckResponse{}, fmt.Errorf("Requested version %q not found", req.Version.Version)
+			return []resource.Version{
+				{Version: chartVersions[len(chartVersions)-1].Version},
+			}, nil
 		}
 
 		newVersions := chartVersions[ourVersion:]
 		for _, v := range newVersions {
-			log.Println(v.Version)
 			versions = append(versions, resource.Version{
 				Version: v.Version,
 			})

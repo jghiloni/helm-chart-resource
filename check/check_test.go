@@ -11,7 +11,7 @@ import (
 	"github.com/jghiloni/helm-resource/check"
 )
 
-func TestFirstCheck(t *testing.T) {
+func TestPublicRepository(t *testing.T) {
 	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.LUTC)
 	client := &fakeClient{}
 
@@ -20,12 +20,12 @@ func TestFirstCheck(t *testing.T) {
 		ChartName:     "concourse",
 	}
 
-	checkReq := check.CheckRequest{
+	checkReq := check.Request{
 		Source: source,
 	}
 
 	t.Run("It works on a public repo with no cursor", func(t *testing.T) {
-		resp, err := check.DoCheck(client, checkReq)
+		resp, err := check.RunCommand(client, checkReq)
 		if err != nil {
 			t.Fatalf("Unexpected error %v", err)
 		}
@@ -42,7 +42,7 @@ func TestFirstCheck(t *testing.T) {
 	t.Run("It works on a public repo with a cursor", func(t *testing.T) {
 		checkReq.Version = &resource.Version{Version: "10.3.0"}
 
-		resp, err := check.DoCheck(client, checkReq)
+		resp, err := check.RunCommand(client, checkReq)
 		if err != nil {
 			t.Fatalf("Unexpected error %v", err)
 		}
@@ -64,6 +64,75 @@ func TestFirstCheck(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("It works on a public repo with a bad cursor", func(t *testing.T) {
+		checkReq.Version = &resource.Version{Version: "999.3.0"}
+		resp, err := check.RunCommand(client, checkReq)
+		if err != nil {
+			t.Fatalf("Unexpected error %v", err)
+		}
+
+		if len(resp) != 1 {
+			t.Fatalf("There should be exactly 1 version returned, but there were %d", len(resp))
+		}
+
+		if resp[0].Version != "11.1.0" {
+			t.Fatalf("Expected version %s to be 11.1.0", resp[0].Version)
+		}
+	})
+}
+
+func TestPrivateRepository(t *testing.T) {
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.LUTC)
+	client := &authClient{
+		client: &fakeClient{},
+	}
+
+	source := resource.Source{
+		RepositoryURL: "https://example.com/",
+		ChartName:     "concourse",
+		Username:      "admin",
+		Password:      "password",
+	}
+
+	checkReq := check.Request{
+		Source: source,
+	}
+
+	t.Run("It works on a private repo with no cursor", func(t *testing.T) {
+		resp, err := check.RunCommand(client, checkReq)
+		if err != nil {
+			t.Fatalf("Unexpected error %v", err)
+		}
+
+		if len(resp) != 1 {
+			t.Fatalf("There should be exactly 1 version returned, but there were %d", len(resp))
+		}
+
+		if resp[0].Version != "11.1.0" {
+			t.Fatalf("Expected version %s to be 11.1.0", resp[0].Version)
+		}
+	})
+
+	t.Run("It doesn't work if there are no credentials", func(t *testing.T) {
+		checkReq.Source.Username = ""
+		checkReq.Source.Password = ""
+
+		_, err := check.RunCommand(client, checkReq)
+		if err == nil {
+			t.Fatalf("An error should have occurred but none did")
+		}
+	})
+
+	t.Run("It doesn't work if there are bad credentials", func(t *testing.T) {
+		checkReq.Source.Username = "garbagein"
+		checkReq.Source.Password = "garbageout"
+
+		_, err := check.RunCommand(client, checkReq)
+		if err == nil {
+			t.Fatalf("An error should have occurred but none did")
+		}
+	})
 }
 
 type fakeClient struct{}
@@ -77,6 +146,21 @@ func (f *fakeClient) Do(req *http.Request) (*http.Response, error) {
 	}
 
 	return w.Result(), nil
+}
+
+type authClient struct {
+	client *fakeClient
+}
+
+func (a *authClient) Do(req *http.Request) (*http.Response, error) {
+	authHeader := req.Header.Get("Authorization")
+	if authHeader != "Basic YWRtaW46cGFzc3dvcmQ=" {
+		w := httptest.NewRecorder()
+		w.WriteHeader(http.StatusUnauthorized)
+		return w.Result(), nil
+	}
+
+	return a.client.Do(req)
 }
 
 var chartYAML = `apiVersion: v1

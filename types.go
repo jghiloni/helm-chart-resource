@@ -4,7 +4,7 @@ import "time"
 
 type Source struct {
 	RepositoryURL     string `json:"repository_url"`
-	ChartName         string `json:"chart_name"`
+	ChartName         string `json:"chart"`
 	Username          string `json:"username"`
 	Password          string `json:"password"`
 	SkipTLSValidation bool   `json:"skip_tls_validation"`
@@ -12,7 +12,7 @@ type Source struct {
 }
 
 type Version struct {
-	Version string `json:"digest"`
+	Version string `json:"version"`
 }
 
 type MetadataField struct {
