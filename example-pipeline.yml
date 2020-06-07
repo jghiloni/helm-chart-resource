@@ -1,0 +1,35 @@
+resource_types:
+- name: helm-chart
+  type: registry-image
+  source:
+    repository: jghiloni/helm-chart-resource
+
+resources:
+- name: concourse-helm
+  type: helm-chart
+  source:
+    repository_url: https://concourse-charts.storage.googleapis.com
+    chart: concourse
+
+jobs:
+- name: test
+  plan:
+  - get: concourse-helm
+  - task: test
+    config:
+      platform: linux
+      
+      image_resource:
+        type: registry-image
+        source:
+          repository: alpine
+      
+      inputs:
+      - name: concourse-helm
+      
+      run:
+        path: /bin/sh
+        args:
+        - -c 
+        - |
+          ls concourse-helm

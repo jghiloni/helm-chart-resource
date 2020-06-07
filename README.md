@@ -3,6 +3,23 @@
 This resource allows you to monitor a [Helm](https://helm.sh) repository for
 new versions to a chart.
 
+To use:
+
+```
+resource_types:
+- name: helm-chart
+  type: registry-image
+  source:
+    repository: jghiloni/helm-chart-resource
+
+resources:
+- name: concourse-helm
+  type: helm-chart
+  source:
+    repository_url: https://concourse-charts.storage.googleapis.com
+    chart: concourse
+```
+
 ## Source Configuration
 * `repository_url`: *Required*. The Base URL of the Helm Repository (The URL you would use in `helm repo add`).
 * `chart`: *Required*. The name of the helm chart.
