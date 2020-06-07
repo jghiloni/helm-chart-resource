@@ -42,3 +42,10 @@ Fetches all files specified.
   If no globs are set, all files will be downloaded.
 
 If `skip_download` is `true`, the `globs` field is ignored.
+
+### `out`: Pushes a new version of a chart
+
+#### Parameters
+* `repository`: *Required*. Can be a directory or tarball.
+* `version_file`: *Optional*. If set, the pushed chart will have the version specified in `version_file`,
+  overriding the version specified in Chart.yaml.
