@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -10,12 +12,21 @@ import (
 )
 
 func main() {
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Ltime | log.LUTC)
 	var req in.Request
-	decoder := json.NewDecoder(os.Stdin)
+
+	var file *os.File
+	var err error
+	if file, err = ioutil.TempFile(os.TempDir(), "in-"); err != nil {
+		log.Fatal(err)
+	}
+
+	decoder := json.NewDecoder(io.TeeReader(os.Stdin, file))
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&req); err != nil {
 		log.Fatal(err)
 	}
+	file.Close()
 
 	client := resource.NewClient(req.Source.SkipTLSValidation)
 

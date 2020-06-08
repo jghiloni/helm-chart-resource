@@ -35,25 +35,16 @@ resources:
 Reports the latest version for the specified chart in the repository.
 
 ### `in`: Fetches the chart files from the repository
-Fetches all files specified in the `get` parameters. In addition, the following files
+Fetches all files specified in the chart's `urls` section In addition, the following files
 are created, regardless of whether or not `skip_download` is true:
 * `version`: The version number of the fetched chart
-* `metadata.yml`: A yaml file with the following contents:
-  ```yaml
-  - name: digest
-    value: chart-digest
-  - name: app_version
-    value: <if set>
-  - name: created
-    value: The date this version of the chart was created in RFC3339 format.
-  ```
+* `metadata.json`: A json file with the following contents:
+  * chart digest
+  * application version
+  * chart created date
 
 #### Parameters
 * `skip_download`: Default `false`. If `true`, no files will be downloaded.
-* `globs`: A list of linux-style globs to match agains the specified files in the chart. 
-  If no globs are set, all files will be downloaded.
-
-If `skip_download` is `true`, the `globs` field is ignored.
 
 ### `out`: Pushes a new version of a chart
 

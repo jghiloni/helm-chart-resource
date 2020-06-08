@@ -1,6 +1,7 @@
 package in
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 
 	resource "github.com/jghiloni/helm-resource"
 	"github.com/jghiloni/helm-resource/repository"
-	"gopkg.in/yaml.v2"
 )
 
 type Params struct {
@@ -56,57 +56,47 @@ func RunCommand(baseDir string, client resource.HTTPClient, req Request) (Respon
 
 	if !req.Params.SkipDownload {
 		for _, chartURL := range chartInfo.URLs {
-			doDownload := false
-			if len(req.Params.Globs) == 0 {
-				doDownload = true
-			} else {
-				for _, glob := range req.Params.Globs {
-					match, err := filepath.Match(glob, chartURL)
-					if err != nil {
-						return Response{}, err
-					}
 
-					if match {
-						doDownload = match
-						break
-					}
-				}
+			var u *url.URL
+			u, err = url.Parse(chartURL)
+			if err != nil {
+				return Response{}, err
 			}
 
-			if doDownload {
-				u, err := url.Parse(req.Source.RepositoryURL)
+			if u.Scheme == "" {
+				u, err = url.Parse(req.Source.RepositoryURL)
 				if err != nil {
 					return Response{}, err
 				}
 
 				u.Path = path.Join(u.Path, chartURL)
-				target := filepath.Join(baseDir, chartURL)
+			}
 
-				if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
-					return Response{}, err
-				}
+			target := filepath.Join(baseDir, filepath.Base(chartURL))
+			if err = os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return Response{}, err
+			}
 
-				targetFile, err := os.Create(target)
-				if err != nil {
-					return Response{}, err
-				}
-				defer targetFile.Close()
+			targetFile, err := os.Create(target)
+			if err != nil {
+				return Response{}, err
+			}
+			defer targetFile.Close()
 
-				httpReq, err := http.NewRequest(http.MethodGet, u.String(), nil)
-				if err != nil {
-					return Response{}, err
-				}
+			httpReq, err := http.NewRequest(http.MethodGet, u.String(), nil)
+			if err != nil {
+				return Response{}, err
+			}
 
-				httpResp, err := client.Do(httpReq)
-				if err != nil {
-					return Response{}, err
-				}
-				defer httpResp.Body.Close()
+			httpResp, err := client.Do(httpReq)
+			if err != nil {
+				return Response{}, err
+			}
+			defer httpResp.Body.Close()
 
-				_, err = io.Copy(targetFile, httpResp.Body)
-				if err != nil {
-					return Response{}, err
-				}
+			_, err = io.Copy(targetFile, httpResp.Body)
+			if err != nil {
+				return Response{}, err
 			}
 		}
 	}
@@ -118,19 +108,21 @@ func RunCommand(baseDir string, client resource.HTTPClient, req Request) (Respon
 	defer versionFile.Close()
 	versionFile.WriteString(req.Version.Version)
 
-	metadataFile, err := os.Create(filepath.Join(baseDir, "metadata.yml"))
+	metadataFile, err := os.Create(filepath.Join(baseDir, "metadata.json"))
 	if err != nil {
 		return Response{}, err
 	}
 	defer metadataFile.Close()
 
 	metadata := []resource.MetadataField{
+		{Name: "repository", Value: req.Source.RepositoryURL},
+		{Name: "chart", Value: req.Source.ChartName},
 		{Name: "digest", Value: chartInfo.Digest},
 		{Name: "app_version", Value: chartInfo.AppVersion},
 		{Name: "created", Value: chartInfo.Created.Format(time.RFC3339)},
 	}
 
-	err = yaml.NewEncoder(metadataFile).Encode(metadata)
+	err = json.NewEncoder(metadataFile).Encode(metadata)
 	if err != nil {
 		return Response{}, err
 	}
