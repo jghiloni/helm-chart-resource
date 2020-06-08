@@ -58,10 +58,7 @@ func TestInCommand(t *testing.T) {
 			}
 		}
 
-		_, err = os.Stat(filepath.Join(baseDir, "concourse-11.1.0.tgz"))
-		if err != nil && !os.IsExist(err) {
-			t.Fatal(err)
-		}
+		checkFiles(t, baseDir, true)
 	})
 
 	t.Run("Downloading Nothing", func(t *testing.T) {
@@ -93,10 +90,7 @@ func TestInCommand(t *testing.T) {
 			}
 		}
 
-		_, err = os.Stat(filepath.Join(baseDir, "concourse-11.1.0.tgz"))
-		if !os.IsNotExist(err) {
-			t.Fatal(err)
-		}
+		checkFiles(t, baseDir, false)
 	})
 
 	t.Run("Downloading With Matching Glob", func(t *testing.T) {
@@ -128,10 +122,7 @@ func TestInCommand(t *testing.T) {
 			}
 		}
 
-		_, err = os.Stat(filepath.Join(baseDir, "concourse-11.1.0.tgz"))
-		if err != nil && !os.IsExist(err) {
-			t.Fatal(err)
-		}
+		checkFiles(t, baseDir, true)
 	})
 
 	t.Run("Downloading With No Match", func(t *testing.T) {
@@ -163,11 +154,27 @@ func TestInCommand(t *testing.T) {
 			}
 		}
 
-		_, err = os.Stat(filepath.Join(baseDir, "concourse-11.1.0.tgz"))
-		if !os.IsNotExist(err) {
+		checkFiles(t, baseDir, false)
+	})
+}
+
+func checkFiles(t *testing.T, baseDir string, checkForTarball bool) {
+	_, err := os.Stat(filepath.Join(baseDir, "version"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = os.Stat(filepath.Join(baseDir, "metadata.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if checkForTarball {
+		_, err := os.Stat(filepath.Join(baseDir, "concourse-11.1.0.tgz"))
+		if err != nil {
 			t.Fatal(err)
 		}
-	})
+	}
 }
 
 type fakeClient struct{}

@@ -12,6 +12,7 @@ import (
 
 	resource "github.com/jghiloni/helm-resource"
 	"github.com/jghiloni/helm-resource/repository"
+	"gopkg.in/yaml.v2"
 )
 
 type Params struct {
@@ -110,13 +111,33 @@ func RunCommand(baseDir string, client resource.HTTPClient, req Request) (Respon
 		}
 	}
 
+	versionFile, err := os.Create(filepath.Join(baseDir, "version"))
+	if err != nil {
+		return Response{}, err
+	}
+	defer versionFile.Close()
+	versionFile.WriteString(req.Version.Version)
+
+	metadataFile, err := os.Create(filepath.Join(baseDir, "metadata.yml"))
+	if err != nil {
+		return Response{}, err
+	}
+	defer metadataFile.Close()
+
+	metadata := []resource.MetadataField{
+		{Name: "digest", Value: chartInfo.Digest},
+		{Name: "app_version", Value: chartInfo.AppVersion},
+		{Name: "created", Value: chartInfo.Created.Format(time.RFC3339)},
+	}
+
+	err = yaml.NewEncoder(metadataFile).Encode(metadata)
+	if err != nil {
+		return Response{}, err
+	}
+
 	response := Response{
-		Version: req.Version,
-		Metadata: []resource.MetadataField{
-			{Name: "digest", Value: chartInfo.Digest},
-			{Name: "app_version", Value: chartInfo.AppVersion},
-			{Name: "created", Value: chartInfo.Created.Format(time.RFC3339)},
-		},
+		Version:  req.Version,
+		Metadata: metadata,
 	}
 
 	return response, nil

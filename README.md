@@ -26,7 +26,8 @@ resources:
 * `username`: *Optional*. If HTTP Basic Authorization is required, the username to authenticate.
 * `password`: *Optional*. If HTTP Basic Authorization is required, the password to authenticate.
 * `skip_tls_validation`: *Optional*. Please don't (defaults to `false`)
-* `sort_by`: *Optional*. Defaults to `semver`. If versions are not semantically versioned, use `created` instead.
+* `sort_by`: *Optional*. Defaults to `semver`. If versions are not semantically versioned or want to version by date
+  created, use `created` instead.
 
 ## Behavior
 
@@ -34,7 +35,18 @@ resources:
 Reports the latest version for the specified chart in the repository.
 
 ### `in`: Fetches the chart files from the repository
-Fetches all files specified.
+Fetches all files specified in the `get` parameters. In addition, the following files
+are created, regardless of whether or not `skip_download` is true:
+* `version`: The version number of the fetched chart
+* `metadata.yml`: A yaml file with the following contents:
+  ```yaml
+  - name: digest
+    value: chart-digest
+  - name: app_version
+    value: <if set>
+  - name: created
+    value: The date this version of the chart was created in RFC3339 format.
+  ```
 
 #### Parameters
 * `skip_download`: Default `false`. If `true`, no files will be downloaded.
