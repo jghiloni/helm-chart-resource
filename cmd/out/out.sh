@@ -37,7 +37,7 @@ helm repo add ${repo_name} ${repository_url} ${auth_args}
 helm push ${repository} ${repo_name}
 
 [ -f "$(dirname ${repository})/metadata.json" ] && \
-    metadata=$(cat "${repository}/metadata.json") || \
+    metadata=$(cat "$(dirname ${repository})/metadata.json") || \
     metadata="[ {\"name\": \"repository\", \"value\": \"${repository_url}\"}, {\"name\": \"chart\", \"value\": \"${chart}\"} ]"
 
 version=$(helm search repo "${repo_name}/${chart}" -o json | jq -r --arg chart "${repo_name}/${chart}" '.[] | select(.name==$chart) | .version')
