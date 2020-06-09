@@ -11,6 +11,7 @@ resource_types:
   type: registry-image
   source:
     repository: jghiloni/helm-chart-resource
+    tag: v0.1.1
 
 resources:
 - name: concourse-helm
@@ -25,7 +26,7 @@ resources:
 * `chart`: *Required*. The name of the helm chart.
 * `username`: *Optional*. If HTTP Basic Authorization is required, the username to authenticate.
 * `password`: *Optional*. If HTTP Basic Authorization is required, the password to authenticate.
-* `skip_tls_validation`: *Optional*. Please don't (defaults to `false`)
+* `skip_tls_validation`: *Optional*. Defaults to `false`. Please don't.
 * `sort_by`: *Optional*. Defaults to `semver`. If versions are not semantically versioned or want to version by date
   created, use `created` instead.
 
