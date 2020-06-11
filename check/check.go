@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	resource "github.com/jghiloni/helm-resource"
 	"github.com/jghiloni/helm-resource/repository"
 )
