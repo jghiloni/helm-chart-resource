@@ -24,7 +24,7 @@ func RunCommand(client resource.HTTPClient, req Request) (Response, error) {
 		return Response{}, err
 	}
 
-	chartVersions, ok := repo.Entries[req.Source.ChartName]
+	allChartVersions, ok := repo.Entries[req.Source.ChartName]
 	if !ok {
 		return Response{}, fmt.Errorf("No chart %q found", req.Source.ChartName)
 	}
@@ -38,16 +38,32 @@ func RunCommand(client resource.HTTPClient, req Request) (Response, error) {
 		return Response{}, fmt.Errorf("Sort criteria is %q, but it must be semver or created", sortBy)
 	}
 
+	chartVersions := []resource.HelmChartInfo{}
+	for _, info := range allChartVersions {
+		ver, err := semver.ParseTolerant(info.Version)
+		if err != nil {
+			log.Printf("error parsing semver %q", info.Version)
+			continue
+		}
+
+		if req.Source.IncludePreReleases || len(ver.Pre) == 0 {
+			chartVersions = append(chartVersions, info)
+		}
+	}
+
 	sort.Slice(chartVersions, func(i, j int) bool {
 		switch sortBy {
 		case "semver":
-			v1, e1 := semver.Parse(chartVersions[i].Version)
+			v1, e1 := semver.ParseTolerant(chartVersions[i].Version)
 			if e1 != nil {
 				log.Printf("Error parsing semver %q\n", chartVersions[i].Version)
 				return false
 			}
+			if !req.Source.IncludePreReleases && len(v1.Pre) > 0 {
+				return false
+			}
 
-			v2, e2 := semver.Parse(chartVersions[j].Version)
+			v2, e2 := semver.ParseTolerant(chartVersions[j].Version)
 			if e2 != nil {
 				log.Printf("Error parsing semver %q\n", chartVersions[j].Version)
 				return false

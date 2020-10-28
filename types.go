@@ -3,12 +3,13 @@ package resource
 import "time"
 
 type Source struct {
-	RepositoryURL     string `json:"repository_url"`
-	ChartName         string `json:"chart"`
-	Username          string `json:"username"`
-	Password          string `json:"password"`
-	SkipTLSValidation bool   `json:"skip_tls_validation"`
-	SortBy            string `json:"sort_by"`
+	RepositoryURL      string `json:"repository_url"`
+	ChartName          string `json:"chart"`
+	Username           string `json:"username"`
+	Password           string `json:"password"`
+	SkipTLSValidation  bool   `json:"skip_tls_validation"`
+	SortBy             string `json:"sort_by"`
+	IncludePreReleases bool   `json:"include_pre_releases"`
 }
 
 type Version struct {
